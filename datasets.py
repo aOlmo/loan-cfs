@@ -31,13 +31,51 @@ def get_credit():
     column_names = ["Male", "Age", "Debt", "Married", "BankCustomer", "EducationLevel", "Ethnicity", "YearsEmployed",
                     "PriorDefault", "Employed", "CreditScore", "DriversLicense", "Citizen", "ZipCode", "Income", "Approved"]
 
-    df = read_csv(full_path, names=column_names, header=None, dtype={"ZipCode": object})
+    df = read_csv(full_path, names=column_names, header=None, dtype={"ZipCode": object}, na_values='?')
     df = df.dropna()
 
-    replmnts = {"Male": {'a': 1, 'b': 0}, "Approved": {'+': 1, '-': 0}}
-    df = df.replace({'t': 1, 'f': 0})
+    #TODO: Scale data
+    replmnts = {"Male": {'a': True, 'b': False}, "Approved": {'+': True, '-': False}}
+    df = df.replace({'t': True, 'f': False})
     df = df.replace(replmnts)
 
-    return df
+    # df = df.drop(["CreditScore","Age", 'Married', "Debt", "ZipCode", "BankCustomer", "Citizen", "DriversLicense", "Ethnicity", "EducationLevel"], axis=1)
 
-get_credit()
+    from sklearn.preprocessing import MinMaxScaler
+    scaler = MinMaxScaler()
+    # df[["YearsEmployed", "Income"]] = scaler.fit_transform(df[["YearsEmployed", "Income"]])
+
+    data = {
+        "df": df,
+        "dot_graph":
+            """
+                digraph {
+                Male;Age;Debt;Married;BankCustomer;ZipCode;CreditScore;DriversLicense;Citizen;PriorDefault;EducationLevel;Ethnicity;YearsEmployed;Income;
+                Male->Approved;
+                Age->Married;Age->EducationLevel;Age->YearsEmployed;Age->CreditScore;Age->Approved; Age->Debt; Age->DriversLicense; Age->Income;
+                Debt->Approved;
+                Married->Approved;
+                BankCustomer->Approved;
+                ZipCode->BankCustomer; ZipCode->Approved;
+                CreditScore->Approved;
+                DriversLicense->Approved;
+                Citizen->Approved;
+                PriorDefault->Approved;
+                EducationLevel->Approved; EducationLevel->PriorDefault;
+                Ethnicity->Approved;
+                YearsEmployed->Income;YearsEmployed->Approved;
+                Income->Approved;Income->ZipCode;}
+            """.replace("\n", " ")
+        # "dot_graph":
+        #     """
+        #         digraph {
+        #         Male->Approved;
+        #         PriorDefault->Approved;
+        #         YearsEmployed->Income;YearsEmployed->Approved;
+        #         Income->Approved;Income->ZipCode;}
+        #     """.replace("\n", " ")
+    }
+
+
+    return data
+
