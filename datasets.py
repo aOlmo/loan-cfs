@@ -35,15 +35,13 @@ def get_credit():
     df = df.dropna()
 
     #TODO: Scale data
-    replmnts = {"Male": {'a': True, 'b': False}, "Approved": {'+': True, '-': False}}
+    replmnts = {"Male": {'a': 1, 'b': 0}, "Approved": {'+': 1, '-': 0}}
     df = df.replace({'t': True, 'f': False})
     df = df.replace(replmnts)
+    df.Approved = df.Approved.astype(int)
+    df.Male = df.Male.astype(int)
 
     # df = df.drop(["CreditScore","Age", 'Married', "Debt", "ZipCode", "BankCustomer", "Citizen", "DriversLicense", "Ethnicity", "EducationLevel"], axis=1)
-
-    from sklearn.preprocessing import MinMaxScaler
-    scaler = MinMaxScaler()
-    # df[["YearsEmployed", "Income"]] = scaler.fit_transform(df[["YearsEmployed", "Income"]])
 
     data = {
         "df": df,
@@ -66,14 +64,6 @@ def get_credit():
                 YearsEmployed->Income;YearsEmployed->Approved;
                 Income->Approved;Income->ZipCode;}
             """.replace("\n", " ")
-        # "dot_graph":
-        #     """
-        #         digraph {
-        #         Male->Approved;
-        #         PriorDefault->Approved;
-        #         YearsEmployed->Income;YearsEmployed->Approved;
-        #         Income->Approved;Income->ZipCode;}
-        #     """.replace("\n", " ")
     }
 
 
