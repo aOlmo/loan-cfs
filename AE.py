@@ -1,42 +1,19 @@
 import pdb
-from pandas import read_csv
-from sklearn.preprocessing import LabelEncoder
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.compose import ColumnTransformer
-from sklearn.model_selection import train_test_split
-
 import torch
 import torch.nn as nn
 import torchvision
 
-def get_adult_train_test():
-    full_path = 'data/UCI_adult.csv'
-    df = read_csv(full_path, na_values='?')
-    df = df.dropna()
-    X, y = df.drop(df.columns[-1], axis=1), df[df.columns[-1]]
-    y = LabelEncoder().fit_transform(y)
-
-    cat_cols = X.select_dtypes(include=['object', 'bool']).columns
-    num_cols = X.select_dtypes(include=['int64', 'float64']).columns
-
-    ct = ColumnTransformer([('cat', OneHotEncoder(), cat_cols), ('num', MinMaxScaler(), num_cols)])
-    X_transf = ct.fit_transform(X)
-    X = X_transf.toarray()
-
-    return train_test_split(X, y, test_size=0.33, random_state=42)  # X_train, X_test, y_train, y_test
-
-
-X_train, X_test, y_train, y_test = get_adult_train_test()
+from datasets import *
+from sklearn.model_selection import train_test_split
 
 class AE(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
         self.encoder_layer = nn.Linear(
-            in_features=kwargs["input_shape"], out_features=32
+            in_features=kwargs["input_shape"], out_features=16
         )
         self.decoder_output_layer = nn.Linear(
-            in_features=32, out_features=kwargs["input_shape"]
+            in_features=16, out_features=kwargs["input_shape"]
         )
 
     def forward(self, features):
@@ -46,13 +23,20 @@ class AE(nn.Module):
         reconstructed = torch.relu(decoded)
         return reconstructed
 
+credit_dict = get_credit()
+
+#TODO: Should we separate x and y?
+x, y = credit_dict["x_y"]
+in_dim = x.shape[1]
+
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.33, random_state=42)
 
 #  use gpu if available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # create a model from `AE` autoencoder class
 # load it to the specified device, either gpu or cpu
-model = AE(input_shape=104).to(device)
+model = AE(input_shape=in_dim).to(device)
 
 # create an optimizer object
 # Adam optimizer with learning rate 1e-3
@@ -63,8 +47,10 @@ criterion = nn.MSELoss()
 
 transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
 
+x_train = torch.Tensor(x_train)
+
 train_loader = torch.utils.data.DataLoader(
-    X_train, batch_size=128, shuffle=True, num_workers=4, pin_memory=True
+    x_train, batch_size=32, shuffle=True, num_workers=4, pin_memory=True
 )
 
 epochs = 50
@@ -73,7 +59,7 @@ for epoch in range(epochs):
     for batch_features in train_loader:
         # reshape mini-batch data to [N, 784] matrix
         # load it to the active device
-        batch_features = batch_features.view(-1, 104).to(device).type(torch.float32)
+        batch_features = batch_features.view(-1, in_dim).to(device).type(torch.float32)
 
         # reset the gradients back to zero
         # PyTorch accumulates gradients on subsequent backward passes
@@ -99,6 +85,8 @@ for epoch in range(epochs):
 
     # display the epoch training loss
     print("epoch : {}/{}, loss = {:.6f}".format(epoch + 1, epochs, loss))
+
+print("1")
 
 ################################################
 # # This is the size of our encoded representations

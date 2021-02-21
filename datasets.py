@@ -34,27 +34,36 @@ def get_credit():
     df = read_csv(full_path, names=column_names, header=None, dtype={"ZipCode": object}, na_values='?')
     df = df.dropna()
 
-    #TODO: Scale data
     replmnts = {"Male": {'a': 1, 'b': 0}, "Approved": {'+': 1, '-': 0}}
     df = df.replace({'t': True, 'f': False})
     df = df.replace(replmnts)
     df.Approved = df.Approved.astype(int)
     df.Male = df.Male.astype(int)
 
-    # df = df.drop(["CreditScore","Age", 'Married', "Debt", "ZipCode", "BankCustomer", "Citizen", "DriversLicense", "Ethnicity", "EducationLevel"], axis=1)
+    # Dropping ZipCode for dimensionality reduction
+    df = df.drop(["ZipCode"], axis=1)
+
+    obj_df = df.select_dtypes(include=['object'])
+    df = pd.get_dummies(df, columns=obj_df.columns)
+
+    cols = list(df.columns.values)  # Make a list of all of the columns in the df
+    cols.pop(cols.index("Approved"))  # Remove b from list
+    df = df[cols + ["Approved"]]
+
+    #TODO: Change all datatype to float + Scale data
+    x, y = df.iloc[:, :-1].values.astype(float), df.iloc[:, -1].values
 
     data = {
         "df": df,
         "dot_graph":
             """
                 digraph {
-                Male;Age;Debt;Married;BankCustomer;ZipCode;CreditScore;DriversLicense;Citizen;PriorDefault;EducationLevel;Ethnicity;YearsEmployed;Income;
+                Male;Age;Debt;Married;BankCustomer;CreditScore;DriversLicense;Citizen;PriorDefault;EducationLevel;Ethnicity;YearsEmployed;Income;
                 Male->Approved;
                 Age->Married;Age->EducationLevel;Age->YearsEmployed;Age->CreditScore;Age->Approved; Age->Debt; Age->DriversLicense; Age->Income;
                 Debt->Approved;
                 Married->Approved;
                 BankCustomer->Approved;
-                ZipCode->BankCustomer; ZipCode->Approved;
                 CreditScore->Approved;
                 DriversLicense->Approved;
                 Citizen->Approved;
@@ -62,8 +71,9 @@ def get_credit():
                 EducationLevel->Approved; EducationLevel->PriorDefault;
                 Ethnicity->Approved;
                 YearsEmployed->Income;YearsEmployed->Approved;
-                Income->Approved;Income->ZipCode;}
-            """.replace("\n", " ")
+                Income->Approved;}
+            """.replace("\n", " "),
+        "x_y": [x, y]
     }
 
 

@@ -29,6 +29,10 @@ orthoforest_estimate = model.estimate_effect(identified_estimand_binary,
                                                  "fit_params": {}
                                              })
 print(orthoforest_estimate)
+
+
+################################################################
+
 # from sklearn.linear_model import LogisticRegressionCV
 #
 # drlearner_estimate = model.estimate_effect(identified_estimand_binary,
@@ -45,21 +49,3 @@ print(orthoforest_estimate)
 
 # print(estimate)
 # print("Causal Estimate is " + str(estimate.value))
-
-###################################################
-# data = dowhy.datasets.linear_dataset(beta=10,
-#         num_common_causes=5,
-#         num_instruments = 2,
-#         num_effect_modifiers=1,
-#         num_samples=10000,
-#         treatment_is_binary=True,
-#         num_discrete_common_causes=1)
-#
-# df = data["df"]
-#
-# model=CausalModel(
-#         data = df,
-#         treatment=data["treatment_name"],
-#         outcome=data["outcome_name"],
-#         graph=data["gml_graph"]
-#         )
