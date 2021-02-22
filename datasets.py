@@ -35,7 +35,7 @@ def get_credit():
     df = df.dropna()
 
     replmnts = {"Male": {'a': 1, 'b': 0}, "Approved": {'+': 1, '-': 0}}
-    df = df.replace({'t': True, 'f': False})
+    df = df.replace({'t': 1, 'f': 0})
     df = df.replace(replmnts)
     df.Approved = df.Approved.astype(int)
     df.Male = df.Male.astype(int)
@@ -49,6 +49,11 @@ def get_credit():
     cols = list(df.columns.values)  # Make a list of all of the columns in the df
     cols.pop(cols.index("Approved"))  # Remove b from list
     df = df[cols + ["Approved"]]
+
+    # from sklearn.preprocessing import MinMaxScaler
+    # scaler = MinMaxScaler()
+
+    # df[["Age", "Debt", "YearsEmployed"]] = scaler.fit_transform(df[["Age", "Debt", "YearsEmployed"]])
 
     #TODO: Change all datatype to float + Scale data
     x, y = df.iloc[:, :-1].values.astype(float), df.iloc[:, -1].values

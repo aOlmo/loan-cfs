@@ -1,10 +1,15 @@
+import os
 import pdb
 import torch
 import torch.nn as nn
 import torchvision
+import matplotlib.pyplot as plt
 
 from datasets import *
 from sklearn.model_selection import train_test_split
+
+EPOCHS = 80
+PATH = "models/ae_credit_model_{}.pt".format(EPOCHS)
 
 class AE(nn.Module):
     def __init__(self, **kwargs):
@@ -25,7 +30,6 @@ class AE(nn.Module):
 
 credit_dict = get_credit()
 
-#TODO: Should we separate x and y?
 x, y = credit_dict["x_y"]
 in_dim = x.shape[1]
 
@@ -50,43 +54,59 @@ transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
 x_train = torch.Tensor(x_train)
 
 train_loader = torch.utils.data.DataLoader(
-    x_train, batch_size=32, shuffle=True, num_workers=4, pin_memory=True
+    x_train, batch_size=128, shuffle=True, num_workers=4, pin_memory=True
 )
 
-epochs = 50
-for epoch in range(epochs):
-    loss = 0
-    for batch_features in train_loader:
-        # reshape mini-batch data to [N, 784] matrix
-        # load it to the active device
-        batch_features = batch_features.view(-1, in_dim).to(device).type(torch.float32)
 
-        # reset the gradients back to zero
-        # PyTorch accumulates gradients on subsequent backward passes
-        optimizer.zero_grad()
+if not os.path.exists(PATH):
+    losses = []
+    for epoch in range(EPOCHS):
+        loss = 0
+        for batch_features in train_loader:
+            # reshape mini-batch data to [N, 784] matrix
+            # load it to the active device
+            batch_features = batch_features.view(-1, in_dim).to(device).type(torch.float32)
 
-        # compute reconstructions
-        outputs = model(batch_features)
+            # reset the gradients back to zero
+            # PyTorch accumulates gradients on subsequent backward passes
+            optimizer.zero_grad()
 
-        # compute training reconstruction loss
-        train_loss = criterion(outputs, batch_features)
+            # compute reconstructions
+            outputs = model(batch_features)
 
-        # compute accumulated gradients
-        train_loss.backward()
+            # compute training reconstruction loss
+            train_loss = criterion(outputs, batch_features)
 
-        # perform parameter update based on current gradients
-        optimizer.step()
+            # compute accumulated gradients
+            train_loss.backward()
 
-        # add the mini-batch training loss to epoch loss
-        loss += train_loss.item()
+            # perform parameter update based on current gradients
+            optimizer.step()
 
-    # compute the epoch training loss
-    loss = loss / len(train_loader)
+            # add the mini-batch training loss to epoch loss
+            loss += train_loss.item()
 
-    # display the epoch training loss
-    print("epoch : {}/{}, loss = {:.6f}".format(epoch + 1, epochs, loss))
+        # compute the epoch training loss
+        loss = loss / len(train_loader)
 
-print("1")
+        losses.append(loss)
+
+        # display the epoch training loss
+        print("epoch : {}/{}, loss = {:.6f}".format(epoch + 1, EPOCHS, loss))
+
+    print("[+]: Saved model in " + PATH)
+    torch.save(model, PATH)
+    plt.plot(range(len(losses)), losses)
+    plt.show()
+
+else:
+    model = AE(input_shape=in_dim).to(device)
+    model = torch.load(PATH)
+
+test = torch.Tensor(x_test[0]).to(device)
+print(test)
+print(model(test))
+print("Diff: ", criterion(test, model(test)))
 
 ################################################
 # # This is the size of our encoded representations
