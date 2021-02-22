@@ -12,35 +12,35 @@ from sklearn.model_selection import train_test_split
 
 EPOCHS = 80
 PATH = "models/ae_credit_model_{}.pt".format(EPOCHS)
-TRAIN = 1
+TRAIN = 0
+LOSS_SCALE = 100
+LR = 1e-3
 
 # credit_dict = get_credit()
 # x, y = credit_dict["x_y"]
 x, y = get_adult(npy=True)
 in_dim = x.shape[1]
 
-AE_dims = [in_dim, 16, 8]
+AE_dims = [in_dim, 24, 8]
 
 class AE(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
-        self.encoder_layer_1 = nn.Linear(in_features=kwargs["input_shape"], out_features=AE_dims[1])
-        self.encoder_layer_2 = nn.Linear(in_features=AE_dims[1], out_features=AE_dims[2])
+        self.encoder = nn.Sequential(
+            nn.Linear(AE_dims[0], AE_dims[1]),
+            nn.ReLU(True))
 
-        self.dropout = nn.Dropout(0.5)
+        self.decoder = nn.Sequential(
+            nn.Linear(AE_dims[1], AE_dims[0]),
+            nn.ReLU(True))
 
-        self.decoder_layer_1 = nn.Linear(in_features=AE_dims[2], out_features=AE_dims[1])
-        self.decoder_layer_2 = nn.Linear(in_features=AE_dims[1], out_features=kwargs["input_shape"])
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.decoder(x)
+        return x
 
-    def forward(self, features):
-        cur_vec = torch.relu(self.encoder_layer_1(features))
-        # cur_vec = torch.relu(self.encoder_layer_2(cur_vec))
-        # cur_vec = self.dropout(cur_vec)
-        # cur_vec = torch.relu(self.decoder_layer_1(cur_vec))
-        reconstructed = torch.relu(self.decoder_layer_2(cur_vec))
-        return reconstructed
 
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.33, random_state=42)
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=42)
 
 #  use gpu if available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -51,7 +51,7 @@ model = AE(input_shape=in_dim).to(device)
 
 # create an optimizer object
 # Adam optimizer with learning rate 1e-3
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 
 # mean-squared error loss
 criterion = nn.MSELoss()
@@ -79,7 +79,7 @@ if not os.path.exists(PATH) or TRAIN:
             outputs = model(batch_features)
 
             # compute training reconstruction loss
-            train_loss = criterion(outputs, batch_features)
+            train_loss = criterion(outputs, batch_features) * LOSS_SCALE  # For readibility
 
             # compute accumulated gradients
             train_loss.backward()
@@ -107,32 +107,35 @@ else:
     model = AE(input_shape=in_dim).to(device)
     model = torch.load(PATH)
 
-test = torch.Tensor(x_test[0]).to(device)
-print(test)
-print(model(test))
-print("Diff: ", criterion(test, model(test)))
+x_train = x_train.to(device)
+print("Train MSE: ", criterion(x_train, model(x_train)).item()*LOSS_SCALE)
+
+x_test = torch.Tensor(x_test).to(device)
+print("Test MSE: ", criterion(x_test, model(x_test)).item()*LOSS_SCALE)
+# print(test.shape)
+# print(model(test))
 
 ################################################
 # # This is the size of our encoded representations
 # encoding_dim = 32  # 32 floats -> compression of factor 24.5, assuming the input is 784 floats
-# 
+#
 # # This is our input image
 # input_img = keras.Input(shape=(104,))
 # # "encoded" is the encoded representation of the input
 # encoded = layers.Dense(encoding_dim, activation='relu')(input_img)
 # # "decoded" is the lossy reconstruction of the input
 # decoded = layers.Dense(104, activation='sigmoid')(encoded)
-# 
+#
 # # This model maps an input to its reconstruction
 # autoencoder = keras.Model(input_img, decoded)
-# 
+#
 # # This is our encoded (32-dimensional) input
 # encoded_input = keras.Input(shape=(encoding_dim,))
 # # Retrieve the last layer of the autoencoder model
 # decoder_layer = autoencoder.layers[-1]
 # # Create the decoder model
 # decoder = keras.Model(encoded_input, decoder_layer(encoded_input))
-# 
+#
 # autoencoder.compile(optimizer='adam', loss='binary_crossentropy')
 # autoencoder.fit(X_train, X_train,
 #                 epochs=50,
