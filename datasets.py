@@ -52,10 +52,12 @@ def get_credit():
 
     from sklearn.preprocessing import MinMaxScaler
     scaler = MinMaxScaler()
+    num_cols = df.select_dtypes(include=['int64', 'float64']).columns
+    ct = ColumnTransformer([('num', MinMaxScaler(), num_cols)])
 
-    # df[["Age", "Debt", "YearsEmployed"]] = scaler.fit_transform(df[["Age", "Debt", "YearsEmployed"]])
+    df[num_cols] = ct.fit_transform(df)
 
-    #TODO: Change all datatype to float + Scale data
+    #TODO: Change all datatype to float + Scale data + Normalize over all?
     x, y = df.iloc[:, :-1].values.astype(float), df.iloc[:, -1].values
 
     data = {

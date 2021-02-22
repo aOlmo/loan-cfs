@@ -11,14 +11,14 @@ from datasets import *
 from sklearn.model_selection import train_test_split
 
 EPOCHS = 80
-PATH = "models/ae_credit_model_{}.pt".format(EPOCHS)
-TRAIN = 0
+PATH = "models/ae_credit_{}.pt".format(EPOCHS)
+TRAIN = 1
 LOSS_SCALE = 100
 LR = 1e-3
 
-# credit_dict = get_credit()
-# x, y = credit_dict["x_y"]
-x, y = get_adult(npy=True)
+credit_dict = get_credit()
+x, y = credit_dict["x_y"]
+# x, y = get_adult(npy=True)
 in_dim = x.shape[1]
 
 AE_dims = [in_dim, 24, 8]
@@ -110,10 +110,14 @@ else:
 x_train = x_train.to(device)
 print("Train MSE: ", criterion(x_train, model(x_train)).item()*LOSS_SCALE)
 
+print(x_train[0])
+print(model(x_train[0]))
+
 x_test = torch.Tensor(x_test).to(device)
 print("Test MSE: ", criterion(x_test, model(x_test)).item()*LOSS_SCALE)
-# print(test.shape)
-# print(model(test))
+
+print(x_test[0])
+print(model(x_test[0]))
 
 ################################################
 # # This is the size of our encoded representations
