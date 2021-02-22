@@ -2,6 +2,8 @@ import os
 import pdb
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
 import torchvision
 import matplotlib.pyplot as plt
 
@@ -10,28 +12,33 @@ from sklearn.model_selection import train_test_split
 
 EPOCHS = 80
 PATH = "models/ae_credit_model_{}.pt".format(EPOCHS)
+TRAIN = 1
+
+# credit_dict = get_credit()
+# x, y = credit_dict["x_y"]
+x, y = get_adult(npy=True)
+in_dim = x.shape[1]
+
+AE_dims = [in_dim, 16, 8]
 
 class AE(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
-        self.encoder_layer = nn.Linear(
-            in_features=kwargs["input_shape"], out_features=16
-        )
-        self.decoder_output_layer = nn.Linear(
-            in_features=16, out_features=kwargs["input_shape"]
-        )
+        self.encoder_layer_1 = nn.Linear(in_features=kwargs["input_shape"], out_features=AE_dims[1])
+        self.encoder_layer_2 = nn.Linear(in_features=AE_dims[1], out_features=AE_dims[2])
+
+        self.dropout = nn.Dropout(0.5)
+
+        self.decoder_layer_1 = nn.Linear(in_features=AE_dims[2], out_features=AE_dims[1])
+        self.decoder_layer_2 = nn.Linear(in_features=AE_dims[1], out_features=kwargs["input_shape"])
 
     def forward(self, features):
-        activation = self.encoder_layer(features)
-        code = torch.relu(activation)
-        decoded = self.decoder_output_layer(code)
-        reconstructed = torch.relu(decoded)
+        cur_vec = torch.relu(self.encoder_layer_1(features))
+        # cur_vec = torch.relu(self.encoder_layer_2(cur_vec))
+        # cur_vec = self.dropout(cur_vec)
+        # cur_vec = torch.relu(self.decoder_layer_1(cur_vec))
+        reconstructed = torch.relu(self.decoder_layer_2(cur_vec))
         return reconstructed
-
-credit_dict = get_credit()
-
-x, y = credit_dict["x_y"]
-in_dim = x.shape[1]
 
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.33, random_state=42)
 
@@ -44,12 +51,10 @@ model = AE(input_shape=in_dim).to(device)
 
 # create an optimizer object
 # Adam optimizer with learning rate 1e-3
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
 # mean-squared error loss
 criterion = nn.MSELoss()
-
-transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
 
 x_train = torch.Tensor(x_train)
 
@@ -58,12 +63,11 @@ train_loader = torch.utils.data.DataLoader(
 )
 
 
-if not os.path.exists(PATH):
+if not os.path.exists(PATH) or TRAIN:
     losses = []
     for epoch in range(EPOCHS):
         loss = 0
         for batch_features in train_loader:
-            # reshape mini-batch data to [N, 784] matrix
             # load it to the active device
             batch_features = batch_features.view(-1, in_dim).to(device).type(torch.float32)
 

@@ -50,8 +50,8 @@ def get_credit():
     cols.pop(cols.index("Approved"))  # Remove b from list
     df = df[cols + ["Approved"]]
 
-    # from sklearn.preprocessing import MinMaxScaler
-    # scaler = MinMaxScaler()
+    from sklearn.preprocessing import MinMaxScaler
+    scaler = MinMaxScaler()
 
     # df[["Age", "Debt", "YearsEmployed"]] = scaler.fit_transform(df[["Age", "Debt", "YearsEmployed"]])
 
